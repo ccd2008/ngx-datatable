@@ -69,7 +69,7 @@ export declare class DatatableComponent implements OnInit, DoCheck, AfterViewIni
      * The row height; which is necessary
      * to calculate the height for the lazy rendering.
      */
-    rowHeight: number;
+    rowHeight: number | (() => number);
     /**
      * Type of column width distribution formula.
      * Example: flex, force, standard
@@ -413,8 +413,11 @@ export declare class DatatableComponent implements OnInit, DoCheck, AfterViewIni
      * @param groupByIndex  the index of the column to group the data by
      */
     groupArrayBy(originalArray: any, groupBy: any): {
-        key: any;
-        value: any;
+        key: {
+            key: string;
+            grouping: string;
+        };
+        value: any[];
     }[];
     ngDoCheck(): void;
     /**

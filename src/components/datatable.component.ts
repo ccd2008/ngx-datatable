@@ -235,7 +235,7 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
    * The row height; which is necessary
    * to calculate the height for the lazy rendering.
    */
-  @Input() rowHeight: number = 30;
+  @Input() rowHeight: number | (() => number) = 30;
 
   /**
    * Type of column width distribution formula.
@@ -540,7 +540,8 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
    */
   @HostBinding('class.fixed-row')
   get isFixedRow(): boolean {
-    const rowHeight: number | string = this.rowHeight;
+    const height = (typeof this.rowHeight === 'function') ? this.rowHeight() : this.rowHeight;
+    const rowHeight: number | string = height;
     return (typeof rowHeight === 'string') ?
       (<string>rowHeight) !== 'auto' : true;
   }
@@ -751,7 +752,7 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
       this.recalculate();
 
       // emit page for virtual server-side kickoff
-      if (this.externalPaging && this.scrollbarV) {
+      if (this.externalPaging && this.scrollbarV && this.virtualization) {
         this.page.emit({
           count: this.count,
           pageSize: this.pageSize,
@@ -797,25 +798,82 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
    */
   groupArrayBy(originalArray: any, groupBy: any) {
     // create a map to hold groups with their corresponding results
-    const map = new Map();
-    let i: number = 0;
-
-    originalArray.forEach((item: any) => {
-      const key = item[groupBy];
-      if (!map.has(key)) {
-        map.set(key, [item]);
+    let newArray: Array<{ key: {key: string, grouping: string}, value: any[] }> = [];
+    const arrayKeys = {};
+    let i = 0;
+    const originalArrayLength = originalArray.length;
+    for (let j = 0; j < originalArrayLength; j++) {
+      const key = originalArray[j][groupBy];
+      const index = arrayKeys[key];
+      if (index == null) {
+        newArray.push({ key: {key, grouping: groupBy}, value: [originalArray[j]] });
+        arrayKeys[key] = i;
+        i++;
       } else {
-        map.get(key).push(item);
+        newArray[index].value.push(originalArray[j]);
       }
-      i++;
-    });
-
-    const addGroup = (key: any, value: any) => {
-      return {key, value};
-    };
-
-    // convert map back to a simple array of objects
-    return Array.from(map, x => addGroup(x[0], x[1]));
+    }
+    // console.log(JSON.parse(JSON.stringify(newArray)));
+    if (groupBy === 'personnel_id') {
+      newArray.sort(
+        (a, b) => {
+          return (a.value[0].worker_name).localeCompare(b.value[0].worker_name);
+        }
+      );
+    } else if (groupBy === 'startDateTimestamp') {
+      newArray = newArray.map(
+        (value) => {
+          return {
+            key: value.key, value: value.value.sort(
+              (a, b) => {
+                if (a.startTimestamp < b.startTimestamp) {
+                  return -1;
+                } else if (a.startTimestamp > b.startTimestamp) {
+                  return 1;
+                } else {
+                  return (a.worker_name).localeCompare(b.worker_name);
+                }
+              }
+            )};
+        }
+      );
+    } else if (groupBy === 'location_id') {
+      newArray = newArray.map(
+        (value) => {
+          return {
+            key: value.key, value: value.value.sort(
+              (a, b) => {
+                return (a.worker_name).localeCompare(b.worker_name);
+              }
+            )
+          };
+        }
+      );
+      newArray.sort(
+        (a, b) => {
+          return (a.value[0].location).localeCompare(b.value[0].location);
+        }
+      );
+    } else if (groupBy === 'jobs_id') {
+      newArray = newArray.map(
+        (value) => {
+          return {
+            key: value.key, value: value.value.sort(
+              (a, b) => {
+                  return (a.worker_name).localeCompare(b.worker_name);
+              }
+            )
+          };
+        }
+      );
+      newArray.sort(
+        (a, b) => {
+          return (a.value[0].location).localeCompare(b.value[0].location);
+        }
+      );
+    }
+    // console.log(JSON.parse(JSON.stringify(newArray)));
+    return newArray;
   }
 
   /*
@@ -979,7 +1037,8 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
     // This is because an expanded row is still considered to be a child of
     // the original row.  Hence calculation would use rowHeight only.
     if (this.scrollbarV && this.virtualization) {
-      const size = Math.ceil(this.bodyHeight / this.rowHeight);
+      const height = (typeof this.rowHeight === 'function') ? this.rowHeight() : this.rowHeight;
+      const size = Math.ceil(this.bodyHeight / height);
       return Math.max(size, 0);
     }
 

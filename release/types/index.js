@@ -9,4 +9,5 @@ __export(require("./sort-direction.type"));
 __export(require("./selection.type"));
 __export(require("./click.type"));
 __export(require("./contextmenu.type"));
+__export(require("./activate-event.type"));
 //# sourceMappingURL=index.js.map

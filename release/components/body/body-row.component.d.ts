@@ -1,10 +1,12 @@
-import { ElementRef, KeyValueDiffers, EventEmitter, ChangeDetectorRef, DoCheck } from '@angular/core';
-import { ScrollbarHelper } from '../../services';
-import { TreeStatus } from '../../index';
-export declare class DataTableBodyRowComponent implements DoCheck {
+import { ElementRef, KeyValueDiffers, EventEmitter, ChangeDetectorRef, DoCheck, Renderer2, OnDestroy } from '@angular/core';
+import { ActivateHelperService, ScrollbarHelper } from '../../services';
+import { TableActivateEvent, TreeStatus } from '../../index';
+export declare class DataTableBodyRowComponent implements DoCheck, OnDestroy {
     private differs;
     private scrollbarHelper;
     private cd;
+    private activateEventHelper;
+    private renderer;
     columns: any[];
     innerWidth: number;
     expanded: boolean;
@@ -19,7 +21,7 @@ export declare class DataTableBodyRowComponent implements DoCheck {
     readonly cssClass: string;
     rowHeight: number;
     readonly columnsTotalWidths: string;
-    activate: EventEmitter<any>;
+    activate: EventEmitter<TableActivateEvent>;
     treeAction: EventEmitter<any>;
     _element: any;
     _columnGroupWidths: any;
@@ -28,22 +30,21 @@ export declare class DataTableBodyRowComponent implements DoCheck {
     _columns: any[];
     _innerWidth: number;
     _groupStyles: {
-        left: {};
-        center: {};
-        right: {};
+        [prop: string]: {};
     };
     private _rowDiffer;
-    constructor(differs: KeyValueDiffers, scrollbarHelper: ScrollbarHelper, cd: ChangeDetectorRef, element: ElementRef);
+    private _listeners;
+    constructor(differs: KeyValueDiffers, scrollbarHelper: ScrollbarHelper, cd: ChangeDetectorRef, element: ElementRef, activateEventHelper: ActivateHelperService, renderer: Renderer2);
     ngDoCheck(): void;
+    ngOnDestroy(): void;
     trackByGroups(index: number, colGroup: any): any;
     columnTrackingFn(index: number, column: any): any;
     buildStylesByGroup(): void;
     calcStylesByGroup(group: string): {
         width: string;
     };
-    onActivate(event: any, index: number): void;
-    onKeyDown(event: KeyboardEvent): void;
-    onMouseenter(event: any): void;
+    onActivate(event: TableActivateEvent, index: number): void;
     recalculateColumns(val?: any[]): void;
     onTreeAction(): void;
+    private registerEvents;
 }

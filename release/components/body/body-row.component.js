@@ -15,12 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 var utils_1 = require("../../utils");
 var services_1 = require("../../services");
-var events_1 = require("../../events");
 var DataTableBodyRowComponent = /** @class */ (function () {
-    function DataTableBodyRowComponent(differs, scrollbarHelper, cd, element) {
+    function DataTableBodyRowComponent(differs, scrollbarHelper, cd, element, activateEventHelper, renderer) {
         this.differs = differs;
         this.scrollbarHelper = scrollbarHelper;
         this.cd = cd;
+        this.activateEventHelper = activateEventHelper;
+        this.renderer = renderer;
         this.treeStatus = 'collapsed';
         this.activate = new core_1.EventEmitter();
         this.treeAction = new core_1.EventEmitter();
@@ -29,8 +30,10 @@ var DataTableBodyRowComponent = /** @class */ (function () {
             center: {},
             right: {}
         };
+        this._listeners = [];
         this._element = element.nativeElement;
         this._rowDiffer = differs.find({}).create();
+        this.registerEvents();
     }
     Object.defineProperty(DataTableBodyRowComponent.prototype, "columns", {
         get: function () {
@@ -109,6 +112,9 @@ var DataTableBodyRowComponent = /** @class */ (function () {
             this.cd.markForCheck();
         }
     };
+    DataTableBodyRowComponent.prototype.ngOnDestroy = function () {
+        this._listeners.forEach(function (l) { return l(); });
+    };
     DataTableBodyRowComponent.prototype.trackByGroups = function (index, colGroup) {
         return colGroup.type;
     };
@@ -116,9 +122,9 @@ var DataTableBodyRowComponent = /** @class */ (function () {
         return column.$$id;
     };
     DataTableBodyRowComponent.prototype.buildStylesByGroup = function () {
-        this._groupStyles['left'] = this.calcStylesByGroup('left');
-        this._groupStyles['center'] = this.calcStylesByGroup('center');
-        this._groupStyles['right'] = this.calcStylesByGroup('right');
+        this._groupStyles.left = this.calcStylesByGroup('left');
+        this._groupStyles.center = this.calcStylesByGroup('center');
+        this._groupStyles.right = this.calcStylesByGroup('right');
         this.cd.markForCheck();
     };
     DataTableBodyRowComponent.prototype.calcStylesByGroup = function (group) {
@@ -144,33 +150,6 @@ var DataTableBodyRowComponent = /** @class */ (function () {
         event.rowElement = this._element;
         this.activate.emit(event);
     };
-    DataTableBodyRowComponent.prototype.onKeyDown = function (event) {
-        var keyCode = event.keyCode;
-        var isTargetRow = event.target === this._element;
-        var isAction = keyCode === utils_1.Keys.return ||
-            keyCode === utils_1.Keys.down ||
-            keyCode === utils_1.Keys.up ||
-            keyCode === utils_1.Keys.left ||
-            keyCode === utils_1.Keys.right;
-        if (isAction && isTargetRow) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.activate.emit({
-                type: 'keydown',
-                event: event,
-                row: this.row,
-                rowElement: this._element
-            });
-        }
-    };
-    DataTableBodyRowComponent.prototype.onMouseenter = function (event) {
-        this.activate.emit({
-            type: 'mouseenter',
-            event: event,
-            row: this.row,
-            rowElement: this._element
-        });
-    };
     DataTableBodyRowComponent.prototype.recalculateColumns = function (val) {
         if (val === void 0) { val = this.columns; }
         this._columns = val;
@@ -180,6 +159,46 @@ var DataTableBodyRowComponent = /** @class */ (function () {
     };
     DataTableBodyRowComponent.prototype.onTreeAction = function () {
         this.treeAction.emit();
+    };
+    DataTableBodyRowComponent.prototype.registerEvents = function () {
+        var _this = this;
+        var events = ['mouseenter', 'keydown'];
+        var _loop_1 = function (type) {
+            if (!this_1.activateEventHelper.isAllowed(type)) {
+                return "continue";
+            }
+            this_1._listeners.push(this_1.renderer.listen(this_1._element, type, function (event) {
+                var emit = true;
+                if (type === 'keydown') {
+                    var keyCode = event.keyCode;
+                    var isTargetCell = event.target === _this._element;
+                    var isAction = keyCode === utils_1.Keys.return ||
+                        keyCode === utils_1.Keys.down ||
+                        keyCode === utils_1.Keys.up ||
+                        keyCode === utils_1.Keys.left ||
+                        keyCode === utils_1.Keys.right;
+                    emit = isAction && isTargetCell;
+                    if (emit) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                }
+                if (!emit) {
+                    return;
+                }
+                _this.activate.emit({
+                    type: type,
+                    event: event,
+                    row: _this.row,
+                    rowElement: _this._element
+                });
+            }));
+        };
+        var this_1 = this;
+        for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
+            var type = events_1[_i];
+            _loop_1(type);
+        }
     };
     __decorate([
         core_1.Input(),
@@ -251,18 +270,6 @@ var DataTableBodyRowComponent = /** @class */ (function () {
         core_1.Output(),
         __metadata("design:type", core_1.EventEmitter)
     ], DataTableBodyRowComponent.prototype, "treeAction", void 0);
-    __decorate([
-        core_1.HostListener('keydown', ['$event']),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", void 0)
-    ], DataTableBodyRowComponent.prototype, "onKeyDown", null);
-    __decorate([
-        core_1.HostListener('mouseenter', ['$event']),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", void 0)
-    ], DataTableBodyRowComponent.prototype, "onMouseenter", null);
     DataTableBodyRowComponent = __decorate([
         core_1.Component({
             selector: 'datatable-body-row',
@@ -273,7 +280,9 @@ var DataTableBodyRowComponent = /** @class */ (function () {
         __metadata("design:paramtypes", [core_1.KeyValueDiffers,
             services_1.ScrollbarHelper,
             core_1.ChangeDetectorRef,
-            core_1.ElementRef])
+            core_1.ElementRef,
+            services_1.ActivateHelperService,
+            core_1.Renderer2])
     ], DataTableBodyRowComponent);
     return DataTableBodyRowComponent;
 }());

@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 var utils_1 = require("../../utils");
 var types_1 = require("../../types");
-var events_1 = require("../../events");
+var services_1 = require("../../services");
 var DataTableBodyCellComponent = /** @class */ (function () {
-    function DataTableBodyCellComponent(element, cd) {
+    // tslint:disable-next-line:max-line-length
+    function DataTableBodyCellComponent(element, cd, activateEventHelper, renderer) {
         this.cd = cd;
+        this.activateEventHelper = activateEventHelper;
+        this.renderer = renderer;
         this.activate = new core_1.EventEmitter();
         this.treeAction = new core_1.EventEmitter();
         this.isFocused = false;
@@ -34,7 +37,9 @@ var DataTableBodyCellComponent = /** @class */ (function () {
             treeStatus: this.treeStatus,
             onTreeAction: this.onTreeAction.bind(this),
         };
+        this._listeners = [];
         this._element = element.nativeElement;
+        this.registerEvents();
     }
     Object.defineProperty(DataTableBodyCellComponent.prototype, "group", {
         get: function () {
@@ -236,6 +241,7 @@ var DataTableBodyCellComponent = /** @class */ (function () {
         if (this.cellTemplate) {
             this.cellTemplate.clear();
         }
+        this._listeners.forEach(function (l) { return l(); });
     };
     DataTableBodyCellComponent.prototype.checkValueUpdates = function () {
         var value = '';
@@ -265,54 +271,10 @@ var DataTableBodyCellComponent = /** @class */ (function () {
     DataTableBodyCellComponent.prototype.onBlur = function () {
         this.isFocused = false;
     };
-    DataTableBodyCellComponent.prototype.onClick = function (event) {
-        this.activate.emit({
-            type: 'click',
-            event: event,
-            row: this.row,
-            group: this.group,
-            rowHeight: this.rowHeight,
-            column: this.column,
-            value: this.value,
-            cellElement: this._element
-        });
-    };
-    DataTableBodyCellComponent.prototype.onDblClick = function (event) {
-        this.activate.emit({
-            type: 'dblclick',
-            event: event,
-            row: this.row,
-            group: this.group,
-            rowHeight: this.rowHeight,
-            column: this.column,
-            value: this.value,
-            cellElement: this._element
-        });
-    };
-    DataTableBodyCellComponent.prototype.onKeyDown = function (event) {
-        var keyCode = event.keyCode;
-        var isTargetCell = event.target === this._element;
-        var isAction = keyCode === utils_1.Keys.return ||
-            keyCode === utils_1.Keys.down ||
-            keyCode === utils_1.Keys.up ||
-            keyCode === utils_1.Keys.left ||
-            keyCode === utils_1.Keys.right;
-        if (isAction && isTargetCell) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.activate.emit({
-                type: 'keydown',
-                event: event,
-                row: this.row,
-                group: this.group,
-                rowHeight: this.rowHeight,
-                column: this.column,
-                value: this.value,
-                cellElement: this._element
-            });
-        }
-    };
     DataTableBodyCellComponent.prototype.onCheckboxChange = function (event) {
+        if (!this.activateEventHelper.isAllowed('checkbox')) {
+            return;
+        }
         this.activate.emit({
             type: 'checkbox',
             event: event,
@@ -346,6 +308,50 @@ var DataTableBodyCellComponent = /** @class */ (function () {
     DataTableBodyCellComponent.prototype.calcLeftMargin = function (column, row) {
         var levelIndent = column.treeLevelIndent != null ? column.treeLevelIndent : 50;
         return column.isTreeColumn ? row.level * levelIndent : 0;
+    };
+    DataTableBodyCellComponent.prototype.registerEvents = function () {
+        var _this = this;
+        var events = ['click', 'dblclick', 'keydown'];
+        var _loop_1 = function (type) {
+            if (!this_1.activateEventHelper.isAllowed(type)) {
+                return "continue";
+            }
+            this_1._listeners.push(this_1.renderer.listen(this_1._element, type, function (event) {
+                var emit = true;
+                if (type === 'keydown') {
+                    var keyCode = event.keyCode;
+                    var isTargetCell = event.target === _this._element;
+                    var isAction = keyCode === utils_1.Keys.return ||
+                        keyCode === utils_1.Keys.down ||
+                        keyCode === utils_1.Keys.up ||
+                        keyCode === utils_1.Keys.left ||
+                        keyCode === utils_1.Keys.right;
+                    emit = isAction && isTargetCell;
+                    if (emit) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                }
+                if (!emit) {
+                    return;
+                }
+                _this.activate.emit({
+                    type: type,
+                    event: event,
+                    row: _this.row,
+                    group: _this.group,
+                    rowHeight: _this.rowHeight,
+                    column: _this.column,
+                    value: _this.value,
+                    cellElement: _this._element
+                });
+            }));
+        };
+        var this_1 = this;
+        for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
+            var type = events_1[_i];
+            _loop_1(type);
+        }
     };
     __decorate([
         core_1.Input(),
@@ -445,31 +451,13 @@ var DataTableBodyCellComponent = /** @class */ (function () {
         __metadata("design:paramtypes", []),
         __metadata("design:returntype", void 0)
     ], DataTableBodyCellComponent.prototype, "onBlur", null);
-    __decorate([
-        core_1.HostListener('click', ['$event']),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", void 0)
-    ], DataTableBodyCellComponent.prototype, "onClick", null);
-    __decorate([
-        core_1.HostListener('dblclick', ['$event']),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", void 0)
-    ], DataTableBodyCellComponent.prototype, "onDblClick", null);
-    __decorate([
-        core_1.HostListener('keydown', ['$event']),
-        __metadata("design:type", Function),
-        __metadata("design:paramtypes", [Object]),
-        __metadata("design:returntype", void 0)
-    ], DataTableBodyCellComponent.prototype, "onKeyDown", null);
     DataTableBodyCellComponent = __decorate([
         core_1.Component({
             selector: 'datatable-body-cell',
             changeDetection: core_1.ChangeDetectionStrategy.OnPush,
             template: "\n    <div class=\"datatable-body-cell-label\"\n      [style.margin-left.px]=\"calcLeftMargin(column, row)\">\n      <label\n        *ngIf=\"column.checkboxable && (!displayCheck || displayCheck(row, column, value))\"\n        class=\"datatable-checkbox\">\n        <input\n          type=\"checkbox\"\n          [checked]=\"isSelected\"\n          (click)=\"onCheckboxChange($event)\"\n        />\n      </label>\n      <ng-container *ngIf=\"column.isTreeColumn\">\n        <button *ngIf=\"!column.treeToggleTemplate\"\n          class=\"datatable-tree-button\"\n          [disabled]=\"treeStatus==='disabled'\"\n          (click)=\"onTreeAction()\">\n          <span>\n            <i *ngIf=\"treeStatus==='loading'\"\n              class=\"icon datatable-icon-collapse\"></i>\n            <i *ngIf=\"treeStatus==='collapsed'\"\n              class=\"icon datatable-icon-up\"></i>\n            <i *ngIf=\"treeStatus==='expanded' ||\n                      treeStatus==='disabled'\"\n              class=\"icon datatable-icon-down\"></i>\n          </span>\n        </button>\n        <ng-template *ngIf=\"column.treeToggleTemplate\"\n          [ngTemplateOutlet]=\"column.treeToggleTemplate\"\n          [ngTemplateOutletContext]=\"{ cellContext: cellContext }\">\n        </ng-template>\n      </ng-container>\n\n      <span\n        *ngIf=\"!column.cellTemplate\"\n        [title]=\"sanitizedValue\"\n        [innerHTML]=\"value\">\n      </span>\n      <ng-template #cellTemplate\n        *ngIf=\"column.cellTemplate\"\n        [ngTemplateOutlet]=\"column.cellTemplate\"\n        [ngTemplateOutletContext]=\"cellContext\">\n      </ng-template>\n    </div>\n  "
         }),
-        __metadata("design:paramtypes", [core_1.ElementRef, core_1.ChangeDetectorRef])
+        __metadata("design:paramtypes", [core_1.ElementRef, core_1.ChangeDetectorRef, services_1.ActivateHelperService, core_1.Renderer2])
     ], DataTableBodyCellComponent);
     return DataTableBodyCellComponent;
 }());

@@ -55,7 +55,38 @@ var RowHeightCache = /** @class */ (function () {
             }
             // Add the detail row height to the already expanded rows.
             // This is useful for the table that goes through a filter or sort.
-            var expanded = rowExpansions.get(row);
+            var expanded = void 0;
+            if (row != null) {
+                if (typeof row === 'object') {
+                    if ('key' in row) {
+                        if (row.key != null) {
+                            if (typeof row.key === 'object') {
+                                if ('key' in row.key) {
+                                    expanded = rowExpansions.get(row.key.key);
+                                }
+                                else {
+                                    expanded = rowExpansions.get(row.key);
+                                }
+                            }
+                            else {
+                                expanded = rowExpansions.get(row.key);
+                            }
+                        }
+                        else {
+                            expanded = rowExpansions.get(row);
+                        }
+                    }
+                    else {
+                        expanded = rowExpansions.get(row);
+                    }
+                }
+                else {
+                    expanded = rowExpansions.get(row);
+                }
+            }
+            else {
+                expanded = rowExpansions.get(row);
+            }
             if (row && expanded === 1) {
                 if (isDetailFn) {
                     var index = rowIndexes.get(row);

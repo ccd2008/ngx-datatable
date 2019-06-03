@@ -80,7 +80,7 @@ import { MouseEvent } from '../../events';
               [row]="row"
               [group]="group.value"
               [rowIndex]="getRowIndex(row)"
-              [expanded]="getRowExpanded(row)"
+              [expanded]="getRowExpanded(group)"
               [rowClass]="rowClass"
               (activate)="selector.onActivate($event, i)">
             </datatable-body-row>
@@ -146,7 +146,7 @@ export class DataTableBodyComponent implements OnInit, OnDestroy {
 
   @Input() set rows(val: any[]) {
     this._rows = val;
-    this.rowExpansions.clear();
+    // this.rowExpansions.clear();
     this.recalcLayout();
   }
 
@@ -452,7 +452,7 @@ export class DataTableBodyComponent implements OnInit, OnDestroy {
    */
   getRowAndDetailHeight(row: any): number {
     let rowHeight = this.getRowHeight(row);
-    const expanded = this.rowExpansions.get(row);
+    const expanded = this.rowExpansions.get(row.key.key);
 
     // Adding detail row height if its expanded.
     if (expanded === 1) {
@@ -635,7 +635,7 @@ export class DataTableBodyComponent implements OnInit, OnDestroy {
   toggleRowExpansion(row: any): void {
     // Capture the row index of the first row that is visible on the viewport.
     const viewPortFirstRowIndex = this.getAdjustedViewPortIndex();
-    let expanded = this.rowExpansions.get(row);
+    let expanded = this.rowExpansions.get(row.key.key);
 
     // If the detailRowHeight is auto --> only in case of non-virtualized scroll
     if (this.scrollbarV && this.virtualization) {
@@ -647,7 +647,7 @@ export class DataTableBodyComponent implements OnInit, OnDestroy {
 
     // Update the toggled row and update thive nevere heights in the cache.
     expanded = expanded ^= 1;
-    this.rowExpansions.set(row, expanded);
+    this.rowExpansions.set(row.key.key, expanded);
 
     this.detailToggle.emit({
       rows: [row],
@@ -668,7 +668,7 @@ export class DataTableBodyComponent implements OnInit, OnDestroy {
     const viewPortFirstRowIndex = this.getAdjustedViewPortIndex();
 
     for (const row of this.rows) {
-      this.rowExpansions.set(row, rowExpanded);
+      this.rowExpansions.set(row.key.key, rowExpanded);
     }
 
     if (this.scrollbarV) {
@@ -727,13 +727,30 @@ export class DataTableBodyComponent implements OnInit, OnDestroy {
    * Returns if the row was expanded and set default row expansion when row expansion is empty
    */
   getRowExpanded(row: any): boolean {
-    if (this.rowExpansions.size === 0 && this.groupExpansionDefault) {
-      for (const group of this.groupedRows) {
-        this.rowExpansions.set(group, 1);
+    let expanded;
+    if('key' in row) {
+      if (typeof row.key === 'object') {
+        if('key' in row.key) {
+          if (!this.rowExpansions.has(row.key.key)) {
+            this.rowExpansions.set(row.key.key, this.groupExpansionDefault ? 1 : 0);
+          }
+          expanded = this.rowExpansions.get(row.key.key);
+        } else {
+          if (!this.rowExpansions.has(row.key)) {
+            this.rowExpansions.set(row.key, this.groupExpansionDefault ? 1 : 0);
+          }
+          expanded = this.rowExpansions.get(row.key);
+        }
+      } else {
+        if (!this.rowExpansions.has(row.key)) {
+          this.rowExpansions.set(row.key, this.groupExpansionDefault ? 1 : 0);
+        }
+        expanded = this.rowExpansions.get(row.key);
       }
+    } else {
+      this.rowExpansions.set(row, this.groupExpansionDefault ? 1 : 0);
+      expanded = this.rowExpansions.get(row);
     }
-
-    const expanded = this.rowExpansions.get(row);
     return expanded === 1;
   }
 

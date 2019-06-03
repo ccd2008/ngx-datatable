@@ -1,9 +1,12 @@
-import { ChangeDetectorRef, EventEmitter, ElementRef, ViewContainerRef, OnDestroy, DoCheck } from '@angular/core';
-import { SortDirection } from '../../types';
+import { ChangeDetectorRef, EventEmitter, ElementRef, ViewContainerRef, OnDestroy, DoCheck, Renderer2 } from '@angular/core';
+import { SortDirection, TableActivateEvent } from '../../types';
 import { TableColumn } from '../../types/table-column.type';
+import { ActivateHelperService } from '../../services';
 export declare type TreeStatus = 'collapsed' | 'expanded' | 'loading' | 'disabled';
 export declare class DataTableBodyCellComponent implements DoCheck, OnDestroy {
     private cd;
+    private activateEventHelper;
+    private renderer;
     displayCheck: (row: any, column?: TableColumn, value?: any) => boolean;
     group: any;
     rowHeight: number;
@@ -14,7 +17,7 @@ export declare class DataTableBodyCellComponent implements DoCheck, OnDestroy {
     row: any;
     sorts: any[];
     treeStatus: TreeStatus;
-    activate: EventEmitter<any>;
+    activate: EventEmitter<TableActivateEvent>;
     treeAction: EventEmitter<any>;
     cellTemplate: ViewContainerRef;
     readonly columnCssClasses: any;
@@ -39,18 +42,17 @@ export declare class DataTableBodyCellComponent implements DoCheck, OnDestroy {
     private _expanded;
     private _element;
     private _treeStatus;
-    constructor(element: ElementRef, cd: ChangeDetectorRef);
+    private _listeners;
+    constructor(element: ElementRef, cd: ChangeDetectorRef, activateEventHelper: ActivateHelperService, renderer: Renderer2);
     ngDoCheck(): void;
     ngOnDestroy(): void;
     checkValueUpdates(): void;
     onFocus(): void;
     onBlur(): void;
-    onClick(event: MouseEvent): void;
-    onDblClick(event: MouseEvent): void;
-    onKeyDown(event: KeyboardEvent): void;
-    onCheckboxChange(event: any): void;
+    onCheckboxChange(event: Event): void;
     calcSortDir(sorts: any[]): any;
     stripHtml(html: string): string;
     onTreeAction(): void;
     calcLeftMargin(column: any, row: any): number;
+    private registerEvents;
 }

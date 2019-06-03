@@ -361,7 +361,8 @@ var DatatableComponent = /** @class */ (function () {
          * the row heights are fixed heights.
          */
         get: function () {
-            var rowHeight = this.rowHeight;
+            var height = (typeof this.rowHeight === 'function') ? this.rowHeight() : this.rowHeight;
+            var rowHeight = height;
             return (typeof rowHeight === 'string') ?
                 rowHeight !== 'auto' : true;
         },
@@ -523,7 +524,7 @@ var DatatableComponent = /** @class */ (function () {
         requestAnimationFrame(function () {
             _this.recalculate();
             // emit page for virtual server-side kickoff
-            if (_this.externalPaging && _this.scrollbarV) {
+            if (_this.externalPaging && _this.scrollbarV && _this.virtualization) {
                 _this.page.emit({
                     count: _this.count,
                     pageSize: _this.pageSize,
@@ -567,23 +568,71 @@ var DatatableComponent = /** @class */ (function () {
      */
     DatatableComponent.prototype.groupArrayBy = function (originalArray, groupBy) {
         // create a map to hold groups with their corresponding results
-        var map = new Map();
+        var newArray = [];
+        var arrayKeys = {};
         var i = 0;
-        originalArray.forEach(function (item) {
-            var key = item[groupBy];
-            if (!map.has(key)) {
-                map.set(key, [item]);
+        var originalArrayLength = originalArray.length;
+        for (var j = 0; j < originalArrayLength; j++) {
+            var key = originalArray[j][groupBy];
+            var index = arrayKeys[key];
+            if (index == null) {
+                newArray.push({ key: { key: key, grouping: groupBy }, value: [originalArray[j]] });
+                arrayKeys[key] = i;
+                i++;
             }
             else {
-                map.get(key).push(item);
+                newArray[index].value.push(originalArray[j]);
             }
-            i++;
-        });
-        var addGroup = function (key, value) {
-            return { key: key, value: value };
-        };
-        // convert map back to a simple array of objects
-        return Array.from(map, function (x) { return addGroup(x[0], x[1]); });
+        }
+        // console.log(JSON.parse(JSON.stringify(newArray)));
+        if (groupBy === 'personnel_id') {
+            newArray.sort(function (a, b) {
+                return (a.value[0].worker_name).localeCompare(b.value[0].worker_name);
+            });
+        }
+        else if (groupBy === 'startDateTimestamp') {
+            newArray = newArray.map(function (value) {
+                return {
+                    key: value.key, value: value.value.sort(function (a, b) {
+                        if (a.startTimestamp < b.startTimestamp) {
+                            return -1;
+                        }
+                        else if (a.startTimestamp > b.startTimestamp) {
+                            return 1;
+                        }
+                        else {
+                            return (a.worker_name).localeCompare(b.worker_name);
+                        }
+                    })
+                };
+            });
+        }
+        else if (groupBy === 'location_id') {
+            newArray = newArray.map(function (value) {
+                return {
+                    key: value.key, value: value.value.sort(function (a, b) {
+                        return (a.worker_name).localeCompare(b.worker_name);
+                    })
+                };
+            });
+            newArray.sort(function (a, b) {
+                return (a.value[0].location).localeCompare(b.value[0].location);
+            });
+        }
+        else if (groupBy === 'jobs_id') {
+            newArray = newArray.map(function (value) {
+                return {
+                    key: value.key, value: value.value.sort(function (a, b) {
+                        return (a.worker_name).localeCompare(b.worker_name);
+                    })
+                };
+            });
+            newArray.sort(function (a, b) {
+                return (a.value[0].location).localeCompare(b.value[0].location);
+            });
+        }
+        // console.log(JSON.parse(JSON.stringify(newArray)));
+        return newArray;
     };
     /*
     * Lifecycle hook that is called when Angular dirty checks a directive.
@@ -725,7 +774,8 @@ var DatatableComponent = /** @class */ (function () {
         // This is because an expanded row is still considered to be a child of
         // the original row.  Hence calculation would use rowHeight only.
         if (this.scrollbarV && this.virtualization) {
-            var size = Math.ceil(this.bodyHeight / this.rowHeight);
+            var height = (typeof this.rowHeight === 'function') ? this.rowHeight() : this.rowHeight;
+            var size = Math.ceil(this.bodyHeight / height);
             return Math.max(size, 0);
         }
         // if limit is passed, we are paging
@@ -968,7 +1018,7 @@ var DatatableComponent = /** @class */ (function () {
     ], DatatableComponent.prototype, "scrollbarH", void 0);
     __decorate([
         core_1.Input(),
-        __metadata("design:type", Number)
+        __metadata("design:type", Object)
     ], DatatableComponent.prototype, "rowHeight", void 0);
     __decorate([
         core_1.Input(),
