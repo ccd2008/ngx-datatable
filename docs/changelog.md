@@ -1,5 +1,15 @@
 # Changelog
 
+## 15.0.1
+
+- Fix: Fixes issue where using conditional templates would not render them (#1701)
+
+## 15.0.0
+
+- Breaking: Upgrade to angular 8 (#1697)
+- Fix: Module not found: Error: Can't resolve '.' (#1646)
+- Fix: trackByProp can't work. (#1622)
+
 ## 14.0.0
 
 - Breaking: Upgrade to angular 7
